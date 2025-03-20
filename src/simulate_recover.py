@@ -1,42 +1,48 @@
 import numpy as np
-from forward import forward_ez, simulate_observed_stats
-from inverse import inverse_ez
+from forward import compute_forward_stats, generate_noisy_stats
+from inverse import compute_inverse_params
 
-def simulate_and_recover(true_v, true_a, true_t, N):
+def simulate_and_recover(true_speed, true_boundary, true_delay, sample_count):
     """Simulate data and recover parameters."""
-    R_pred, M_pred, V_pred = forward_ez(true_v, true_a, true_t)
-    R_obs, M_obs, V_obs = simulate_observed_stats(R_pred, M_pred, V_pred, N)
-    v_est, a_est, t_est = inverse_ez(R_obs, M_obs, V_obs)
-    bias = np.array([true_v, true_a, true_t]) - np.array([v_est, a_est, t_est])
+    resp_pred, mean_pred, var_pred = compute_forward_stats(true_speed, true_boundary, true_delay)
+    obs_resp, obs_mean, obs_var = generate_noisy_stats(resp_pred, mean_pred, var_pred, sample_count)
+    
+    est_speed, est_boundary, est_delay = compute_inverse_params(obs_resp, obs_mean, obs_var)
+    
+    bias = np.array([true_speed, true_boundary, true_delay]) - np.array([est_speed, est_boundary, est_delay])
     sq_error = bias ** 2
     return bias, sq_error
 
-def run_simulation(N, iterations=1000):
-    """Run the full simulate-and-recover process for different N values."""
+def run_recovery_experiment(sample_sizes, iterations=1000):
+    """Run the full simulate-and-recover process for different sample sizes."""
     biases = []
     sq_errors = []
+    
     for _ in range(iterations):
-        true_a = np.random.uniform(0.5, 2)
-        true_v = np.random.uniform(0.5, 2)
-        true_t = np.random.uniform(0.1, 0.5)
-        bias, sq_error = simulate_and_recover(true_v, true_a, true_t, N)
+        rand_boundary = np.random.uniform(0.5, 2)
+        rand_speed = np.random.uniform(0.5, 2)
+        rand_delay = np.random.uniform(0.1, 0.5)
+        
+        bias, sq_error = simulate_and_recover(rand_speed, rand_boundary, rand_delay, sample_sizes)
         biases.append(bias)
         sq_errors.append(sq_error)
+    
     mean_bias = np.mean(biases, axis=0)
     mean_sq_error = np.mean(sq_errors, axis=0)
     return mean_bias, mean_sq_error
 
 def main():
-    sample_sizes = [10, 40, 4000]
+    trials = [10, 40, 4000]
     iterations = 1000
-    for N in sample_sizes:
-        mean_bias, mean_sq_error = run_simulation(N, iterations)
-        print(f"Sample Size: {N}")
-        print("Average Bias [v, a, t]:", mean_bias)
-        print("Average Squared Error [v, a, t]:", mean_sq_error)
-        print("---------------------------")
+    
+    for trial in trials:
+        mean_bias, mean_sq_error = run_recovery_experiment(trial, iterations)
+        print(f"Trial Count: {trial}")
+        print("Mean Bias [speed, boundary, delay]:", mean_bias)
+        print("Mean Squared Error [speed, boundary, delay]:", mean_sq_error)
+        print("----------------------------")
 
 if __name__ == "__main__":
-    print("Running simulate-and-recover process...")
+    print("Executing simulation and recovery process...")
     main()
-    print("Simulation complete!")
+    print("Process completed!")
