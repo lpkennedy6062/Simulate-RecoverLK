@@ -1,20 +1,23 @@
 import numpy as np
 
-def forward_ez(v, a, t):
-    """Compute predicted summary statistics from EZ diffusion parameters."""
-    y = np.exp(-a * v)
-    R_pred = 1 / (1 + y)
-    M_pred = t + (a ** 2 / v) * ((1 - y) / (1 + y))
-    V_pred = (a ** 2 / v ** 3) * ((1 - 2 * a * v * y - y ** 2) / (1 + y) ** 2)
-    V_pred = np.clip(V_pred, 1e-6, 1)
-    return R_pred, M_pred, V_pred
+def compute_forward_stats(speed, boundary, delay):
+    """Compute predicted summary statistics from diffusion parameters."""
+    exponent = np.exp(-boundary * speed)
+    response_rate = 1 / (1 + exponent)
+    mean_time = delay + (boundary ** 2 / speed) * ((1 - exponent) / (1 + exponent))
+    variance_time = (boundary ** 2 / speed ** 3) * ((1 - 2 * boundary * speed * exponent - exponent ** 2) / (1 + exponent) ** 2)
+    variance_time = np.clip(variance_time, 1e-6, 1)
+    
+    return response_rate, mean_time, variance_time
 
-def simulate_observed_stats(R_pred, M_pred, V_pred, N):
-    """Generate noisy observed summary statistics."""
-    T_obs = np.random.binomial(N, R_pred)
-    R_obs = T_obs / N
-    M_obs = np.random.normal(M_pred, np.sqrt(V_pred / N))
-    shape = (N - 1) / 2
-    scale = (2 * V_pred) / (N - 1)
-    V_obs = np.random.gamma(shape, scale)
-    return R_obs, M_obs, V_obs
+def generate_noisy_stats(resp_pred, mean_pred, var_pred, samples):
+    """Generate noisy observed statistics."""
+    trial_count = np.random.binomial(samples, resp_pred)
+    observed_resp = trial_count / samples
+    observed_mean = np.random.normal(mean_pred, np.sqrt(var_pred / samples))
+    
+    shape_param = (samples - 1) / 2
+    scale_param = (2 * var_pred) / (samples - 1)
+    observed_var = np.random.gamma(shape_param, scale_param)
+    
+    return observed_resp, observed_mean, observed_var
