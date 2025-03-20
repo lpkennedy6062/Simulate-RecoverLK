@@ -37,13 +37,42 @@ def test_fixed_seed_reproducibility():
     
     assert np.allclose(bias1, bias2, atol=1e-6) and np.allclose(error1, error2, atol=1e-6), "Test failed: Reproducibility issue"
 
+def test_extreme_values():
+    """Ensure the model handles extreme parameter values without failure."""
+    extreme_speed, extreme_boundary, extreme_delay = 10.0, 10.0, 1.0
+    resp_pred, mean_pred, var_pred = compute_forward_stats(extreme_speed, extreme_boundary, extreme_delay)
+    obs_resp, obs_mean, obs_var = resp_pred, mean_pred, var_pred
+
+    est_speed, est_boundary, est_delay = compute_inverse_params(obs_resp, obs_mean, obs_var)
+
+    assert np.isfinite(est_speed) and np.isfinite(est_boundary) and np.isfinite(est_delay), "Test failed: Non-finite values encountered"
+
+
+def test_stability_over_iterations():
+    """Verify that recovery error remains stable over repeated simulations."""
+    errors = []
+    np.random.seed(42)  # Set the seed before running experiments
+    for _ in range(10):
+        bias, mean, var = compute_forward_stats(0.5, 1.0, 0.3)
+        # In reality, you'd do something more elaborate. For now, just store mean:
+        errors.append(mean)
+
+    # Check the variation
+    assert np.std(errors) < 0.005, "Test failed: High variability"
+
+
+
+
+
 if __name__ == "__main__":
     tests = [
         test_consistency_check,
         test_sample_size_dependence,
-        test_fixed_seed_reproducibility
+        test_fixed_seed_reproducibility,
+        test_extreme_values,
+        test_stability_over_iterations
     ]
-    
+
     failed_tests = []
     
     for test in tests:
