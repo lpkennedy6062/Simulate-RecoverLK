@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.abspath("src"))
 import numpy as np
 from src.forward import compute_forward_stats, generate_noisy_stats
 from src.inverse import compute_inverse_params
@@ -57,3 +60,4 @@ if __name__ == "__main__":
             print(f"- {name}")
     else:
         print("All tests passed successfully!")
+
